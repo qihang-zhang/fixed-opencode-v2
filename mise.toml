@@ -33,7 +33,7 @@ run = "bun run test test/location-activity.test.ts test/location-layer.test.ts t
 [tasks."test:adapters"]
 description = "Run our adapter tests against upstream loaded through the adapters"
 dir = "opencode/packages/core"
-run = "bun run script/test.ts --preload {{config_root}}/adapters/test-preload.ts {{config_root}}/tests"
+run = "bun run script/test.ts --preload {{config_root}}/tests/preload.ts {{config_root}}/tests"
 
 [tasks.ci]
 description = "Run the same checks locally and in GitHub Actions (after setup)"

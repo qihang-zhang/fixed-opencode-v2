@@ -7,7 +7,7 @@
 // changes. The transform fails if upstream no longer contains the exact code it
 // targets, so an upstream refactor stops the build instead of silently dropping
 // the fix.
-import type { Adapter } from "./adapter"
+import type { Adapter } from "./index"
 
 const original = 'options.timeToLive ?? "60 minutes"'
 const adapted = 'options.timeToLive ?? (process.env.OPENCODE_LOCATION_TTL || "24 hours")'

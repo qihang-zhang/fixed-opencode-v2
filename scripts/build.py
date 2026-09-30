@@ -2,7 +2,7 @@
 
 Usage: python scripts/build.py <target>, where target is one of TARGETS.
 
-Runs upstream's unmodified packages/cli/script/build.ts with adapters/build-preload.ts
+Runs upstream's unmodified packages/cli/script/build.ts with scripts/build-preload.ts
 preloaded, then checks that the binary contains the adapted code, that the
 upstream submodule was left untouched, and (when the host can run it) that the
 binary starts.
@@ -41,7 +41,7 @@ def main() -> None:
     subprocess.run(
         [
             "bun",
-            f"--preload={ROOT / 'adapters/build-preload.ts'}",
+            f"--preload={ROOT / 'scripts/build-preload.ts'}",
             "script/build.ts",
             f"--target={target}",
             f"--outdir={outdir}",

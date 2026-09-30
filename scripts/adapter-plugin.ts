@@ -1,16 +1,9 @@
+// Wraps the adapters as a Bun plugin, shared by the build (build-preload.ts) and
+// the tests (tests/preload.ts) so both load upstream exactly the same way.
 import type { BunPlugin } from "bun"
-import { locationTtl } from "./location-ttl"
+import { adapters } from "../adapters/index"
 
-export type Adapter = {
-  readonly name: string
-  readonly filter: RegExp
-  readonly transform: (source: string) => string
-}
-
-export const adapters: readonly Adapter[] = [locationTtl]
-
-// A Bun plugin that applies every adapter to the upstream sources it matches,
-// recording which adapters ran so callers can require all of them to apply.
+// Records the name of every adapter that ran, so callers can require all of them.
 export function adapterPlugin(applied: Set<string>): BunPlugin {
   return {
     name: "fixed-opencode-adapters",

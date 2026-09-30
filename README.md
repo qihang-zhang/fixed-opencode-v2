@@ -14,21 +14,29 @@ compiles the binary.
 |---|---|
 | `location-ttl` | Location inactivity eviction default 60 minutes → **24 hours**, so long silent tool calls (e.g. waiting on `codex exec`) are no longer interrupted after an hour. Override at runtime with `OPENCODE_LOCATION_TTL`, e.g. `90 minutes` or `7 days`. |
 
+## Layout
+
+| Folder | Contains |
+|---|---|
+| `adapters/` | Only the changes to OpenCode: `index.ts` (the `Adapter` type and the list of adapters) and one pure source transform per adapter. No Bun, build or test code. |
+| `scripts/` | Everything that builds, syncs and verifies: `adapter-plugin.ts` (adapters as a Bun plugin), `build-preload.ts` (injects it into upstream's build), `build.py`, `upstream.py`, `verify.py`. |
+| `tests/` | Every test we add: `preload.ts` (loads the same plugin into `bun test`) and `*.test.ts`. |
+
 How it works:
 
-- `adapters/build-preload.ts` is preloaded into upstream's unmodified
+- `scripts/build-preload.ts` is preloaded into upstream's unmodified
   `packages/cli/script/build.ts`. It wraps `Bun.build` and adds one plugin that
   rewrites the matched upstream source in memory.
 - Each adapter targets exact upstream code and **fails the build** if that code
   is missing or ambiguous, so an upstream refactor stops the release instead of
   silently dropping the fix. The build also fails if an adapter matched nothing.
-- `adapters/test-preload.ts` applies the same adapters in `bun test`, so
-  `tests/` exercise real upstream code as it is compiled.
+- `tests/preload.ts` applies the same plugin in `bun test`, so `tests/` exercise
+  real upstream code exactly as it is compiled.
 - `scripts/build.py` checks the binary contains the adapted code, that the
   submodule is still pristine, and that the binary starts.
 
 To add an adapter: create `adapters/<name>.ts` exporting an `Adapter`, register
-it in `adapters/adapter.ts`, add a test in `tests/` that fails without it, and
+it in `adapters/index.ts`, add a test in `tests/` that fails without it, and
 bump `patch_revision` in `upstream.json` to publish.
 
 ## Releases
