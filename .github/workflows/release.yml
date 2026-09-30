@@ -1,0 +1,132 @@
+name: Release
+
+# Builds and publishes `v<upstream>-fixed.<patch_revision>` when that release does
+# not exist yet. Nothing is published unless tests and every target build pass.
+on:
+  push:
+    branches: [main]
+    paths: [upstream.json, adapters/**]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to build and release
+        type: string
+        required: true
+      promote:
+        description: Fast-forward main to `ref` before publishing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      exists: ${{ steps.exists.outputs.exists }}
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          submodules: recursive
+          persist-credentials: false
+      - id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.18
+      - id: plan
+        run: mise exec -- uv run --locked python scripts/upstream.py plan
+      - id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.plan.outputs.tag }}" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${{ steps.plan.outputs.tag }} already released; bump patch_revision in upstream.json to publish patch changes."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.exists.outputs.exists == 'false'
+        run: mise run setup
+      - if: steps.exists.outputs.exists == 'false'
+        run: mise run ci
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.exists == 'false'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: opencode-linux-x64
+            runner: ubuntu-24.04
+          - target: opencode-darwin-arm64
+            runner: macos-15
+          - target: opencode-darwin-x64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          submodules: recursive
+          persist-credentials: false
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.18
+      - run: mise run setup
+      - name: Build ${{ matrix.target }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: mise run build ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          fetch-depth: 0
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.18
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Fast-forward main
+        if: inputs.promote
+        # Fails, and publishes nothing, if main moved since the sync started.
+        run: git push origin "${{ needs.plan.outputs.sha }}:refs/heads/main"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_SHA: ${{ needs.plan.outputs.sha }}
+        run: |
+          cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS && cd ..
+          mise exec -- uv run --locked python scripts/upstream.py notes > notes.md
+          gh release create "${{ needs.plan.outputs.tag }}" dist/*.tar.gz dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "${{ needs.plan.outputs.sha }}" \
+            --title "${{ needs.plan.outputs.tag }}" \
+            --notes-file notes.md

@@ -1,0 +1,55 @@
+name: Upstream sync
+
+# Follows official OpenCode V2 releases (npm `latest` + its git tag), never the
+# moving `v2` branch. A new release is staged on a branch, tested and built with
+# our adapters, and only then fast-forwarded onto main and published.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.sync.outputs.changed }}
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          submodules: recursive
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.18
+      - id: sync
+        run: mise run upstream:sync
+      - id: commit
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add opencode upstream.json
+          git commit -m "chore: update upstream to ${{ steps.sync.outputs.upstream }}"
+          git push --force origin HEAD:refs/heads/upstream-sync
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: sync
+    if: needs.sync.outputs.changed == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      ref: ${{ needs.sync.outputs.sha }}
+      promote: true

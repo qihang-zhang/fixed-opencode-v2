@@ -220,3 +220,4 @@ __marimo__/
 # Local tooling state
 .mise/
 node_modules/
+tests/node_modules

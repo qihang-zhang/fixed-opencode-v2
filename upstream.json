@@ -1,5 +1,6 @@
 {
   "repository": "https://github.com/anomalyco/opencode.git",
   "tag": "v2.0.20",
-  "commit": "84c9be93a56304a108f1a22df0c5d62c26d5b6ca"
+  "commit": "84c9be93a56304a108f1a22df0c5d62c26d5b6ca",
+  "patch_revision": 1
 }

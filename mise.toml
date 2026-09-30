@@ -7,15 +7,17 @@ uv = "0.12.0"
 UV_PYTHON_DOWNLOADS = "never"
 
 [tasks.setup]
-description = "Initialize pinned submodules and install locked dependencies"
+description = "Initialize the pinned upstream and install locked dependencies"
 run = [
   "git submodule update --init --recursive",
   "uv sync --locked",
   "cd opencode && bun install --frozen-lockfile",
+  # Adapter tests import upstream core's dependencies.
+  "ln -sfn ../opencode/packages/core/node_modules tests/node_modules",
 ]
 
 [tasks.verify]
-description = "Verify the upstream pin and wrapper configuration"
+description = "Verify the upstream pin, pristine submodule, and tool versions"
 run = "uv run --locked python scripts/verify.py"
 
 [tasks.check]
@@ -24,9 +26,14 @@ dir = "opencode"
 run = "bun run check"
 
 [tasks."test:location"]
-description = "Run isolated upstream location and session lifecycle regressions"
+description = "Run upstream's own location and session lifecycle tests, unadapted"
 dir = "opencode/packages/core"
 run = "bun run test test/location-activity.test.ts test/location-layer.test.ts test/session-execution.test.ts"
+
+[tasks."test:adapters"]
+description = "Run our adapter tests against upstream loaded through the adapters"
+dir = "opencode/packages/core"
+run = "bun run script/test.ts --preload {{config_root}}/adapters/test-preload.ts {{config_root}}/tests"
 
 [tasks.ci]
 description = "Run the same checks locally and in GitHub Actions (after setup)"
@@ -34,4 +41,17 @@ run = [
   "mise run verify",
   "mise run check",
   "mise run test:location",
+  "mise run test:adapters",
 ]
+
+[tasks.build]
+description = "Rebuild one release target with adapters, e.g. `mise run build opencode-linux-x64`"
+run = "uv run --locked python scripts/build.py"
+
+[tasks."upstream:sync"]
+description = "Pin the submodule to the official latest V2 release if it is newer"
+run = "uv run --locked python scripts/upstream.py sync"
+
+[tasks."release:notes"]
+description = "Print release notes for the current pin and adapters"
+run = "uv run --locked python scripts/upstream.py notes"

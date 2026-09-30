@@ -1,40 +1,85 @@
 # fixed-opencode-v2
-Minimal, reproducible fixes for OpenCode V2. Official source is pinned as the
-`./opencode` submodule at **v2.0.20**, recorded in `upstream.json`.
-This initialization does not yet change OpenCode behavior or deploy a server.
 
-## Local setup and CI
+Official OpenCode V2 releases, rebuilt with small build-time adapters.
 
-Install [mise](https://mise.jdx.dev/), then run from this repository:
+The `./opencode` submodule is pinned to an official release tag in
+`upstream.json` and is **never modified**: no patches, no local commits, no
+dirty files (`mise run verify` and the build both enforce this). Fixes live in
+`adapters/` and are applied in memory while upstream's own build script
+compiles the binary.
+
+## Adapters
+
+| Adapter | Change |
+|---|---|
+| `location-ttl` | Location inactivity eviction default 60 minutes → **24 hours**, so long silent tool calls (e.g. waiting on `codex exec`) are no longer interrupted after an hour. Override at runtime with `OPENCODE_LOCATION_TTL`, e.g. `90 minutes` or `7 days`. |
+
+How it works:
+
+- `adapters/build-preload.ts` is preloaded into upstream's unmodified
+  `packages/cli/script/build.ts`. It wraps `Bun.build` and adds one plugin that
+  rewrites the matched upstream source in memory.
+- Each adapter targets exact upstream code and **fails the build** if that code
+  is missing or ambiguous, so an upstream refactor stops the release instead of
+  silently dropping the fix. The build also fails if an adapter matched nothing.
+- `adapters/test-preload.ts` applies the same adapters in `bun test`, so
+  `tests/` exercise real upstream code as it is compiled.
+- `scripts/build.py` checks the binary contains the adapted code, that the
+  submodule is still pristine, and that the binary starts.
+
+To add an adapter: create `adapters/<name>.ts` exporting an `Adapter`, register
+it in `adapters/adapter.ts`, add a test in `tests/` that fails without it, and
+bump `patch_revision` in `upstream.json` to publish.
+
+## Releases
+
+Tagged `v<upstream>-fixed.<patch_revision>`, e.g. `v2.0.20-fixed.1`, with
+`linux-x64`, `darwin-arm64` and `darwin-x64` CLI binaries plus `SHA256SUMS`.
+Binaries report the upstream version (e.g. `2.0.20`) so official clients stay
+compatible.
+
+- **Disable auto-update** (`OPENCODE_DISABLE_AUTOUPDATE=1`), otherwise the next
+  official upgrade replaces the adapted binary.
+- macOS binaries are ad-hoc signed, not notarized.
+- Releases are artifacts only; nothing is deployed to any server.
+
+## Automation
+
+```mermaid
+flowchart LR
+  A[hourly: npm @opencode/cli latest] -->|newer| B[pin submodule to its git tag]
+  B --> C[mise run ci]
+  C --> D[build 3 targets with adapters]
+  D --> E[fast-forward main]
+  E --> F[GitHub Release]
+```
+
+- `upstream-sync.yml` follows official releases only, never the moving `v2`
+  branch. A new version is staged on the `upstream-sync` branch; main moves and
+  a release is published only after tests pass and all targets build. If an
+  adapter no longer matches upstream, the run fails and publishes nothing.
+- `release.yml` also runs when `upstream.json` or `adapters/` change on main,
+  and skips if the release tag exists. **Bump `patch_revision` to publish
+  adapter changes.**
+- `ci.yml` runs setup and checks on pushes and pull requests.
+
+## Local development
+
+Install [mise](https://mise.jdx.dev/), then:
 
 ```sh
 mise trust
 mise install
-mise run setup
-mise run ci
+mise run setup                        # submodule and locked dependencies
+mise run ci                           # same checks as GitHub Actions
+mise run test:adapters                # our adapter tests only
+mise run build opencode-linux-x64     # dist/opencode-linux-x64.tar.gz
+mise run upstream:sync                # pin a newer official release, if any
+mise run release:notes
 ```
 
-mise pins Bun (matching upstream), Python, and uv. uv manages the wrapper's
-Python environment and lockfile; Bun manages OpenCode's existing workspace.
-GitHub Actions uses the same `setup` and `ci` tasks, not separate check scripts.
-
-For focused local debugging:
-
-```sh
-mise run verify
-mise run check
-mise run test:location
-```
-
-The lifecycle tests use upstream's isolated test runner, not your live OpenCode
-service. CI currently covers upstream lint/type checks and focused lifecycle
-tests, not the entire upstream test suite or binary/desktop release builds.
-mise reproduces tool versions and commands, not GitHub runner permissions,
-secrets, service containers, or release infrastructure.
-
-## Upstream updates and patches
-
-Do not follow a moving branch automatically. Update the submodule commit and
-`upstream.json` together, then rerun CI. Keep the official submodule clean;
-future fixes can be maintained as explicit patches in this wrapper repository.
-Unpublished commits inside a submodule cannot be reproduced by CI.
+`mise run ci` runs upstream lint/type checks, upstream's own lifecycle tests
+(unadapted), and our adapter tests. Tests use upstream's isolated environment
+(in-memory database, temporary HOME), not a live OpenCode service. Workflows are
+thin shells over these tasks, so failures reproduce locally, except runner
+permissions, secrets and the release upload.
