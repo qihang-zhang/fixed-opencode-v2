@@ -22,8 +22,6 @@ def main() -> None:
         raise SystemExit("mise Bun version differs from the upstream packageManager.")
     if (root / ".python-version").read_text().strip() != config["tools"]["python"]:
         raise SystemExit("Python pins differ between mise and uv.")
-    if not isinstance(upstream.get("patch_revision"), int) or upstream["patch_revision"] < 1:
-        raise SystemExit("upstream.json needs a positive integer patch_revision.")
     status = subprocess.check_output(["git", "-C", str(root / "opencode"), "status", "--porcelain"], text=True)
     if status:
         raise SystemExit(f"Upstream submodule must stay pristine; adapt it from adapters/ instead:\n{status}")

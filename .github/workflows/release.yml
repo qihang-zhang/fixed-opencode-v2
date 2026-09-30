@@ -1,11 +1,11 @@
 name: Release
 
-# Builds and publishes `v<upstream>-fixed.<patch_revision>` when that release does
-# not exist yet. Nothing is published unless tests and every target build pass.
+# Publishes every commit on main as the next `v<upstream>-fixed.N` (N restarts at 1
+# for each new upstream version).
+# Nothing is published unless tests and every target build pass.
 on:
   push:
     branches: [main]
-    paths: [upstream.json, adapters/**]
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -31,7 +31,6 @@ jobs:
     timeout-minutes: 30
     outputs:
       tag: ${{ steps.plan.outputs.tag }}
-      exists: ${{ steps.exists.outputs.exists }}
       sha: ${{ steps.sha.outputs.sha }}
     steps:
       - uses: actions/checkout@v6
@@ -45,25 +44,14 @@ jobs:
         with:
           version: 2026.9.18
       - id: plan
-        run: mise exec -- uv run --locked python scripts/upstream.py plan
-      - id: exists
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "${{ steps.plan.outputs.tag }}" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::${{ steps.plan.outputs.tag }} already released; bump patch_revision in upstream.json to publish patch changes."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.exists.outputs.exists == 'false'
-        run: mise run setup
-      - if: steps.exists.outputs.exists == 'false'
-        run: mise run ci
+        run: mise exec -- uv run --locked python scripts/upstream.py plan
+      - run: mise run setup
+      - run: mise run ci
 
   build:
     needs: plan
-    if: needs.plan.outputs.exists == 'false'
     strategy:
       fail-fast: true
       matrix:

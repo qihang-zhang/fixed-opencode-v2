@@ -36,12 +36,13 @@ How it works:
   submodule is still pristine, and that the binary starts.
 
 To add an adapter: create `adapters/<name>.ts` exporting an `Adapter`, register
-it in `adapters/index.ts`, add a test in `tests/` that fails without it, and
-bump `patch_revision` in `upstream.json` to publish.
+it in `adapters/index.ts`, and add a test in `tests/` that fails without it.
 
 ## Releases
 
-Tagged `v<upstream>-fixed.<patch_revision>`, e.g. `v2.0.20-fixed.1`, with
+Every push to main is released as the next `v<upstream>-fixed.N`: N counts up
+for the same OpenCode version and restarts at 1 when OpenCode releases a new
+version (e.g. `v2.0.20-fixed.1`, `v2.0.20-fixed.2`, then `v2.0.21-fixed.1`). Each has
 `linux-x64` and `darwin-arm64` (Apple silicon) CLI binaries plus `SHA256SUMS`.
 Binaries report the upstream version (e.g. `2.0.20`) so official clients stay
 compatible.
@@ -66,9 +67,7 @@ flowchart LR
   branch. A new version is staged on the `upstream-sync` branch; main moves and
   a release is published only after tests pass and all targets build. If an
   adapter no longer matches upstream, the run fails and publishes nothing.
-- `release.yml` also runs when `upstream.json` or `adapters/` change on main,
-  and skips if the release tag exists. **Bump `patch_revision` to publish
-  adapter changes.**
+- `release.yml` publishes every push to main as the next `fixed.N`.
 - `ci.yml` runs setup and checks on pushes and pull requests.
 
 ## Local development

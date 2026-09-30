@@ -2,7 +2,7 @@
 
 Commands:
   sync   Pin the submodule to the official latest release if it is newer.
-  plan   Print the release tag for the current pin (e.g. v2.0.20-fixed.1).
+  plan   Print the next release tag for the pinned version (e.g. v2.0.20-fixed.2).
   notes  Print release notes for the current pin and adapters.
 
 Results are also written to $GITHUB_OUTPUT when running in GitHub Actions.
@@ -39,15 +39,15 @@ def sync() -> None:
         version = json.load(response)["version"]
     if parse(version) <= parse(pin["tag"].removeprefix("v")):
         print(f"up to date: official latest is {version}, pinned {pin['tag']}")
-        return output(changed="false", tag=release_tag(pin))
+        return output(changed="false")
     tag = f"v{version}"
     commit = tag_commit(pin["repository"], tag)
     subprocess.run(["git", "-C", "opencode", "fetch", "--depth=1", "origin", f"refs/tags/{tag}:refs/tags/{tag}"], cwd=ROOT, check=True)
     subprocess.run(["git", "-C", "opencode", "checkout", "--detach", commit], cwd=ROOT, check=True)
-    pin = {**pin, "tag": tag, "commit": commit, "patch_revision": 1}
+    pin = {**pin, "tag": tag, "commit": commit}
     PIN.write_text(json.dumps(pin, indent=2) + "\n")
     print(f"updated pin to {tag} ({commit})")
-    output(changed="true", tag=release_tag(pin), upstream=tag)
+    output(changed="true", upstream=tag)
 
 
 def tag_commit(repository: str, tag: str) -> str:
@@ -89,7 +89,16 @@ def notes(pin: dict) -> str:
 
 
 def release_tag(pin: dict) -> str:
-    return f"{pin['tag']}-fixed.{pin['patch_revision']}"
+    # Every commit on main is released: the next `fixed.N` for this upstream
+    # version, starting at 1. Release runs are serialized, so numbers never collide.
+    tags = subprocess.check_output(
+        ["gh", "release", "list", "--limit", "1000", "--json", "tagName", "--jq", ".[].tagName"],
+        cwd=ROOT,
+        text=True,
+    ).split()
+    prefix = f"{pin['tag']}-fixed."
+    numbers = [int(tag.removeprefix(prefix)) for tag in tags if tag.startswith(prefix) and tag.removeprefix(prefix).isdigit()]
+    return f"{prefix}{max(numbers, default=0) + 1}"
 
 
 def parse(version: str) -> tuple[int, ...]:
