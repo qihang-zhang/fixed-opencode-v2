@@ -42,7 +42,7 @@ bump `patch_revision` in `upstream.json` to publish.
 ## Releases
 
 Tagged `v<upstream>-fixed.<patch_revision>`, e.g. `v2.0.20-fixed.1`, with
-`linux-x64`, `darwin-arm64` and `darwin-x64` CLI binaries plus `SHA256SUMS`.
+`linux-x64` and `darwin-arm64` (Apple silicon) CLI binaries plus `SHA256SUMS`.
 Binaries report the upstream version (e.g. `2.0.20`) so official clients stay
 compatible.
 
@@ -57,7 +57,7 @@ compatible.
 flowchart LR
   A[hourly: npm @opencode/cli latest] -->|newer| B[pin submodule to its git tag]
   B --> C[mise run ci]
-  C --> D[build 3 targets with adapters]
+  C --> D[build linux-x64 + darwin-arm64]
   D --> E[fast-forward main]
   E --> F[GitHub Release]
 ```

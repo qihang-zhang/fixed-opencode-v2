@@ -72,8 +72,6 @@ jobs:
             runner: ubuntu-24.04
           - target: opencode-darwin-arm64
             runner: macos-15
-          - target: opencode-darwin-x64
-            runner: macos-15
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:

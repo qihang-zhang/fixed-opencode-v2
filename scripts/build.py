@@ -21,7 +21,6 @@ UPSTREAM = ROOT / "opencode"
 TARGETS = {
     "opencode-linux-x64": ("linux", "x86_64"),
     "opencode-darwin-arm64": ("darwin", "arm64"),
-    "opencode-darwin-x64": ("darwin", "x86_64"),
 }
 # Present only when the location-ttl adapter was compiled in.
 ADAPTED = b"OPENCODE_LOCATION_TTL"
