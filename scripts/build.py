@@ -48,8 +48,11 @@ def main() -> None:
         ],
         cwd=UPSTREAM / "packages/cli",
         check=True,
-        # Match the official release build: stable channel, upstream version, pinned Bun runtime.
-        env={**os.environ, "OPENCODE_VERSION": version, "OPENCODE_CHANNEL": "latest", "BUN_COMPILE_RELEASE": "bun-v1.4.2"},
+        # Match the official release build: stable channel and upstream version. The
+        # compile runtime is mise's official Bun, so BUN_COMPILE_RELEASE is not set:
+        # upstream resolves it through the unauthenticated GitHub API, which is rate
+        # limited on shared CI runners.
+        env={**os.environ, "OPENCODE_VERSION": version, "OPENCODE_CHANNEL": "latest"},
     )
     require_clean("after build")
     binary = outdir / target.replace("opencode", "cli") / "bin/opencode"
