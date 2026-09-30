@@ -1,0 +1,9 @@
+[project]
+name = "fixed-opencode-v2"
+version = "0.1.0"
+description = "Reproducible tooling for minimal OpenCode V2 fixes"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false
