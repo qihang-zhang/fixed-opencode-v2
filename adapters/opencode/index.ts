@@ -1,6 +1,8 @@
 // Every change we make to OpenCode. Each adapter rewrites one upstream source
 // file; how adapters are wired into builds and tests lives in scripts/ and tests/.
 import { locationTtl } from "./location-ttl"
+import { toolStreamStrict } from "./tool-stream-strict"
+import { anthropicRefusal } from "./anthropic-refusal"
 
 export type Adapter = {
   readonly name: string
@@ -10,4 +12,4 @@ export type Adapter = {
   readonly transform: (source: string) => string
 }
 
-export const adapters: readonly Adapter[] = [locationTtl]
+export const adapters: readonly Adapter[] = [locationTtl, toolStreamStrict, anthropicRefusal]

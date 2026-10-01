@@ -24,7 +24,7 @@ REGISTRY = "https://registry.npmjs.org/@opencode%2fcli/latest"
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
     if command == "sync":
-        return sync()
+        return subprocess.run([sys.executable, str(ROOT / "scripts/vendors.py"), "sync"], check=True)
     if command == "plan":
         return output(tag=release_tag(json.loads(PIN.read_text())))
     if command == "notes":
@@ -42,8 +42,8 @@ def sync() -> None:
         return output(changed="false")
     tag = f"v{version}"
     commit = tag_commit(pin["repository"], tag)
-    subprocess.run(["git", "-C", "opencode", "fetch", "--depth=1", "origin", f"refs/tags/{tag}:refs/tags/{tag}"], cwd=ROOT, check=True)
-    subprocess.run(["git", "-C", "opencode", "checkout", "--detach", commit], cwd=ROOT, check=True)
+    subprocess.run(["git", "-C", "vendors/opencode", "fetch", "--depth=1", "origin", f"refs/tags/{tag}:refs/tags/{tag}"], cwd=ROOT, check=True)
+    subprocess.run(["git", "-C", "vendors/opencode", "checkout", "--detach", commit], cwd=ROOT, check=True)
     pin = {**pin, "tag": tag, "commit": commit}
     PIN.write_text(json.dumps(pin, indent=2) + "\n")
     print(f"updated pin to {tag} ({commit})")
@@ -63,7 +63,7 @@ def tag_commit(repository: str, tag: str) -> str:
 
 
 def notes(pin: dict) -> str:
-    adapters = sorted((ROOT / "adapters").glob("*.ts"))
+    adapters = sorted((ROOT / "adapters/opencode").glob("*.ts"))
     lines = [
         f"Official OpenCode {pin['tag']}, unmodified, rebuilt with the build-time adapters below.",
         "",
@@ -76,7 +76,7 @@ def notes(pin: dict) -> str:
         "- `location-ttl`: Location inactivity eviction default 60 minutes → 24 hours;"
         " override at runtime with `OPENCODE_LOCATION_TTL` (e.g. `90 minutes`, `7 days`).",
         "",
-        *[f"- `adapters/{file.name}` sha256 `{hashlib.sha256(file.read_bytes()).hexdigest()}`" for file in adapters],
+        *[f"- `adapters/opencode/{file.name}` sha256 `{hashlib.sha256(file.read_bytes()).hexdigest()}`" for file in adapters],
         "",
         "## Notes",
         "",

@@ -1,8 +1,6 @@
 name: Upstream sync
 
-# Follows official OpenCode V2 releases (npm `latest` + its git tag), never the
-# moving `v2` branch. A new release is staged on a branch, tested and built with
-# our adapters, and only then fast-forwarded onto main and published.
+# Follows the latest formal release tag of OpenCode, OpenChamber, and Orca.
 on:
   schedule:
     - cron: "17 * * * *"
@@ -33,14 +31,16 @@ jobs:
         with:
           version: 2026.9.18
       - id: sync
-        run: mise run upstream:sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: mise run vendors:sync
       - id: commit
         if: steps.sync.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add opencode upstream.json
-          git commit -m "chore: update upstream to ${{ steps.sync.outputs.upstream }}"
+          git add vendors vendors.json upstream.json
+          git commit -m "chore: update vendor releases"
           git push --force origin HEAD:refs/heads/upstream-sync
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 

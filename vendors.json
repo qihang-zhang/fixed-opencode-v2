@@ -1,0 +1,17 @@
+{
+  "opencode": {
+    "repository": "https://github.com/anomalyco/opencode.git",
+    "release": "v2.0.21",
+    "commit": "8a8bd622a3d7dc29ccf30ec17f84e363ed95ed72"
+  },
+  "openchamber": {
+    "repository": "https://github.com/openchamber/openchamber.git",
+    "release": "v2.1.0",
+    "commit": "90726f9949da3408b2baf0f997e24bd71455946e"
+  },
+  "orca": {
+    "repository": "https://github.com/stablyai/orca.git",
+    "release": "v1.4.218",
+    "commit": "75ea50273328d9bd5465170d10a098711d61b5a4"
+  }
+}

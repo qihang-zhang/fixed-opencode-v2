@@ -17,7 +17,7 @@ import sys
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-UPSTREAM = ROOT / "opencode"
+UPSTREAM = ROOT / "vendors/opencode"
 TARGETS = {
     "opencode-linux-x64": ("linux", "x86_64"),
     "opencode-darwin-arm64": ("darwin", "arm64"),

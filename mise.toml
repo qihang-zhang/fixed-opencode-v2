@@ -11,9 +11,9 @@ description = "Initialize the pinned upstream and install locked dependencies"
 run = [
   "git submodule update --init --recursive",
   "uv sync --locked",
-  "cd opencode && bun install --frozen-lockfile",
+  "cd vendors/opencode && bun install --frozen-lockfile",
   # Adapter tests import upstream core's dependencies.
-  "ln -sfn ../opencode/packages/core/node_modules tests/node_modules",
+  "ln -sfn ../vendors/opencode/packages/core/node_modules tests/node_modules",
 ]
 
 [tasks.verify]
@@ -22,17 +22,17 @@ run = "uv run --locked python scripts/verify.py"
 
 [tasks.check]
 description = "Run the upstream canonical lint and type checks"
-dir = "opencode"
+dir = "vendors/opencode"
 run = "bun run check"
 
 [tasks."test:location"]
 description = "Run upstream's own location and session lifecycle tests, unadapted"
-dir = "opencode/packages/core"
+dir = "vendors/opencode/packages/core"
 run = "bun run test test/location-activity.test.ts test/location-layer.test.ts test/session-execution.test.ts"
 
 [tasks."test:adapters"]
 description = "Run our adapter tests against upstream loaded through the adapters"
-dir = "opencode/packages/core"
+dir = "vendors/opencode/packages/core"
 run = "bun run script/test.ts --preload {{config_root}}/tests/preload.ts {{config_root}}/tests"
 
 [tasks.ci]
@@ -50,7 +50,11 @@ run = "uv run --locked python scripts/build.py"
 
 [tasks."upstream:sync"]
 description = "Pin the submodule to the official latest V2 release if it is newer"
-run = "uv run --locked python scripts/upstream.py sync"
+run = "uv run --locked python scripts/vendors.py sync"
+
+[tasks."vendors:sync"]
+description = "Pin all vendors to their latest formal GitHub release tags"
+run = "uv run --locked python scripts/vendors.py sync"
 
 [tasks."release:notes"]
 description = "Print release notes for the current pin and adapters"

@@ -1,12 +1,15 @@
-# fixed-opencode-v2
+# oc-forge
 
-Official OpenCode V2 releases, rebuilt with small build-time adapters.
+Patched, jointly pinned releases of OpenCode, OpenChamber, and Orca.
 
-The `./opencode` submodule is pinned to an official release tag in
-`upstream.json` and is **never modified**: no patches, no local commits, no
-dirty files (`mise run verify` and the build both enforce this). Fixes live in
-`adapters/` and are applied in memory while upstream's own build script
-compiles the binary.
+The `vendors/` submodules are pinned to official stable release git tags in
+`vendors.json` and are **never modified**. Fixes live in `adapters/` and are
+applied in memory while the OpenCode build runs.
+
+OpenCode V2 uses npm `@opencode/cli`'s `latest` version and its matching git tag;
+GitHub's latest release still tracks V1. OpenChamber and Orca use GitHub's latest
+non-draft, non-prerelease desktop release. Current binary builds cover OpenCode;
+OpenChamber and Orca are source-pinned for future joint packaging.
 
 ## Adapters
 
@@ -18,7 +21,8 @@ compiles the binary.
 
 | Folder | Contains |
 |---|---|
-| `adapters/` | Only the changes to OpenCode: `index.ts` (the `Adapter` type and the list of adapters) and one pure source transform per adapter. No Bun, build or test code. |
+| `vendors/` | Pristine OpenCode, OpenChamber, and Orca release submodules. |
+| `adapters/` | Per-vendor changes: `opencode/`, `openchamber/`, and `orca/`. Empty vendor folders are kept with `.gitkeep` until patches are added. |
 | `scripts/` | Everything that builds, syncs and verifies: `adapter-plugin.ts` (adapters as a Bun plugin), `build-preload.ts` (injects it into upstream's build), `build.py`, `upstream.py`, `verify.py`. |
 | `tests/` | Every test we add: `preload.ts` (loads the same plugin into `bun test`) and `*.test.ts`. |
 
@@ -35,8 +39,8 @@ How it works:
 - `scripts/build.py` checks the binary contains the adapted code, that the
   submodule is still pristine, and that the binary starts.
 
-To add an adapter: create `adapters/<name>.ts` exporting an `Adapter`, register
-it in `adapters/index.ts`, and add a test in `tests/` that fails without it.
+To add an OpenCode adapter: create `adapters/opencode/<name>.ts` exporting an `Adapter`, register
+it in `adapters/opencode/index.ts`, and add a test in `tests/` that fails without it.
 
 ## Releases
 
@@ -56,15 +60,15 @@ compatible.
 
 ```mermaid
 flowchart LR
-  A[hourly: npm @opencode/cli latest] -->|newer| B[pin submodule to its git tag]
+  A[hourly: official stable release channels] -->|newer| B[pin all vendor submodules to tags]
   B --> C[mise run ci]
   C --> D[build linux-x64 + darwin-arm64]
   D --> E[fast-forward main]
   E --> F[GitHub Release]
 ```
 
-- `upstream-sync.yml` follows official releases only, never the moving `v2`
-  branch. A new version is staged on the `upstream-sync` branch; main moves and
+- `upstream-sync.yml` follows formal release tags only, never moving branches. A
+  new version is staged on the `upstream-sync` branch; main moves and
   a release is published only after tests pass and all targets build. If an
   adapter no longer matches upstream, the run fails and publishes nothing.
 - `release.yml` publishes every push to main as the next `fixed.N`.
@@ -81,7 +85,7 @@ mise run setup                        # submodule and locked dependencies
 mise run ci                           # same checks as GitHub Actions
 mise run test:adapters                # our adapter tests only
 mise run build opencode-linux-x64     # dist/opencode-linux-x64.tar.gz
-mise run upstream:sync                # pin a newer official release, if any
+mise run vendors:sync                 # pin newer formal releases, if any
 mise run release:notes
 ```
 

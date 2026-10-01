@@ -1,3 +1,9 @@
-[submodule "opencode"]
-	path = opencode
+[submodule "vendors/opencode"]
+	path = vendors/opencode
 	url = https://github.com/anomalyco/opencode.git
+[submodule "vendors/openchamber"]
+	path = vendors/openchamber
+	url = https://github.com/openchamber/openchamber.git
+[submodule "vendors/orca"]
+	path = vendors/orca
+	url = https://github.com/stablyai/orca.git

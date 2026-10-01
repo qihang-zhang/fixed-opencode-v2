@@ -1,7 +1,7 @@
 // Wraps the adapters as a Bun plugin, shared by the build (build-preload.ts) and
 // the tests (tests/preload.ts) so both load upstream exactly the same way.
 import type { BunPlugin } from "bun"
-import { adapters } from "../adapters/index"
+import { adapters } from "../adapters/opencode/index"
 
 // Records the name of every adapter that ran, so callers can require all of them.
 export function adapterPlugin(applied: Set<string>): BunPlugin {
